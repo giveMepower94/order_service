@@ -12,7 +12,7 @@ class OrderModel(Base):
     __tablename__ = "orders"
 
     __table_args__ = (
-        UniqueConstraint("idempotency_key", name="uq_orders_idempotency_key")
+        UniqueConstraint("idempotency_key", name="uq_orders_idempotency_key"),
     )
 
     id: Mapped[str] = mapped_column(

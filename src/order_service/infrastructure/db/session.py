@@ -11,7 +11,7 @@ from src.order_service.core.config import settings
 
 
 engine: AsyncEngine = create_async_engine(
-    database_url=settings.database_url,
+    settings.database_url,
     future=True,
     echo=True
 )
