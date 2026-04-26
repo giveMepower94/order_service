@@ -42,9 +42,9 @@ async def create_order(
 ) -> OrderResponse:
     orders = OrdersRepository(session)
     usecase = CreateOrderUseCase(
-        session,
-        orders,
-        catalog_client
+        session=session,
+        orders=orders,
+        catalog_client=catalog_client,
     )
 
     try:
@@ -70,7 +70,7 @@ async def get_order(
     session: AsyncSession = Depends(get_session)
 ) -> OrderResponse:
     orders = OrdersRepository(session)
-    usecase = GetOrderUseCase(orders)
+    usecase = GetOrderUseCase(orders=orders)
 
     try:
         order = await usecase.execute(order_id)
