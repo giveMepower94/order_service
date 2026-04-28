@@ -51,6 +51,9 @@ class CreateOrderUseCase:
             idempotency_key=idempotency_key,
         )
 
+        await self.session.commit()
+        await self.session.refresh(order)
+
         amount: Decimal = item.price * quantity
 
         try:
@@ -58,15 +61,12 @@ class CreateOrderUseCase:
                 order_id=order.id,
                 amount=amount,
                 callback_url=settings.order_service_callback_url.strip(),
-                idempotency_key=f"payment-{idempotency_key}"
+                idempotency_key=f"payment-{idempotency_key}",
             )
         except PaymentsServiceError:
             await self.orders.update_status(order, OrderStatus.CANCELLED)
             await self.session.commit()
             await self.session.refresh(order)
             return order
-
-        await self.session.commit()
-        await self.session.refresh(order)
 
         return order

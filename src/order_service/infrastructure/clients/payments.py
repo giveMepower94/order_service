@@ -4,7 +4,6 @@ import httpx
 from pydantic import BaseModel
 
 from src.order_service.core.config import settings
-from src.order_service.domain.enums import OrderStatus
 from src.order_service.core.exceptions import OrderServiceError
 
 
@@ -13,7 +12,7 @@ class PaymentCreateResponse(BaseModel):
     user_id: str | None = None
     order_id: str
     amount: Decimal
-    status: OrderStatus
+    status: str
     idempotency_key: str
 
 
