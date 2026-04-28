@@ -43,3 +43,14 @@ class OrdersRepository:
         await self.session.flush()
         await self.session.refresh(order)
         return order
+
+    async def update_status(
+        self,
+        order: OrderModel,
+        status: OrderStatus,
+    ) -> OrderModel:
+        order.status = status.value
+        await self.session.flush()
+        await self.session.refresh(order)
+        return order
+

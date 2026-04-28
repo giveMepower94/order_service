@@ -1,6 +1,13 @@
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.order_service.core.config import settings
 from src.order_service.core.exceptions import ItemNotAvailableError
+from src.order_service.domain.enums import OrderStatus
+from src.order_service.infrastructure.clients.payments import (
+    PaymentsClient,
+    PaymentsServiceError
+)
 from src.order_service.infrastructure.clients.catalog import CatalogClient
 from src.order_service.infrastructure.db.models import OrderModel
 from src.order_service.infrastructure.repositories.orders import OrdersRepository
@@ -12,11 +19,13 @@ class CreateOrderUseCase:
         *,
         session: AsyncSession,
         orders: OrdersRepository,
-        catalog_client: CatalogClient
+        catalog_client: CatalogClient,
+        payments_client: PaymentsClient
     ) -> None:
         self.session = session
         self.orders = orders
         self.catalog_client = catalog_client
+        self.payments_client = payments_client
 
     async def execute(
         self,
@@ -41,6 +50,21 @@ class CreateOrderUseCase:
             quantity=quantity,
             idempotency_key=idempotency_key,
         )
+
+        amount: Decimal = item.price * quantity
+
+        try:
+            await self.payments_client.create_payment(
+                order_id=order.id,
+                amount=amount,
+                callback_url=settings.order_service_callback_url.strip(),
+                idempotency_key=f"payment-{idempotency_key}"
+            )
+        except PaymentsServiceError:
+            await self.orders.update_status(order, OrderStatus.CANCELLED)
+            await self.session.commit()
+            await self.session.refresh(order)
+            return order
 
         await self.session.commit()
         await self.session.refresh(order)

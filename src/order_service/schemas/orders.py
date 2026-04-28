@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -18,3 +19,11 @@ class OrderResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class PaymentCallbackRequest(BaseModel):
+    payment_id: str
+    order_id: str
+    status: str
+    amount: Decimal
+    error_message: str | None = None

@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.order_service.api.dependencies import get_catalog_client
+from src.order_service.api.dependencies import (
+    get_catalog_client,
+    get_payments_client
+)
+from src.order_service.domain.enums import OrderStatus
+from src.order_service.infrastructure.clients.payments import PaymentsClient
 from src.order_service.application.usecases.create_order import CreateOrderUseCase
 from src.order_service.application.usecases.get_order import GetOrderUseCase
 from src.order_service.core.exceptions import (
@@ -10,9 +15,13 @@ from src.order_service.core.exceptions import (
     OrderNotFoundError,
 )
 from src.order_service.infrastructure.clients.catalog import CatalogClient
+from src.order_service.infrastructure.clients.payments import PaymentsClient
 from src.order_service.infrastructure.db.session import get_session
 from src.order_service.infrastructure.repositories.orders import OrdersRepository
-from src.order_service.schemas.orders import CreateOrderRequest, OrderResponse
+from src.order_service.schemas.orders import (
+    CreateOrderRequest, 
+    OrderResponse, 
+    PaymentCallbackRequest)
 
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -38,13 +47,15 @@ def build_order_response(order) -> OrderResponse:
 async def create_order(
     data: CreateOrderRequest,
     session: AsyncSession = Depends(get_session),
-    catalog_client: CatalogClient = Depends(get_catalog_client)
+    catalog_client: CatalogClient = Depends(get_catalog_client),
+    payments_client: PaymentsClient = Depends(get_payments_client)
 ) -> OrderResponse:
     orders = OrdersRepository(session)
     usecase = CreateOrderUseCase(
         session=session,
         orders=orders,
         catalog_client=catalog_client,
+        payments_client=payments_client
     )
 
     try:
@@ -78,3 +89,24 @@ async def get_order(
         raise HTTPException(status_code=404, detail="Order not found")
 
     return build_order_response(order)
+
+
+@router.post("/payment-callback")
+async def payment_callback(
+    data: PaymentCallbackRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    orders = OrdersRepository(session)
+    order = await orders.get_by_id(data.order_id)
+
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if data.status == "succeeded":
+        await orders.update_status(order, OrderStatus.PAID)
+    elif data.status == "failed":
+        await orders.update_status(order, OrderStatus.CANCELLED)
+    
+    await session.commit()
+
+    return {"status": "ok"}

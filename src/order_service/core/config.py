@@ -15,6 +15,11 @@ class settings(BaseSettings):
 
     database_url: str = Field(alias="POSTGRES_CONNECTION_STRING")
 
+    order_service_callback_url: str = Field(
+        default="http://localhost:8000/api/orders/payment-callback",
+        alias="ORDER_SERVICE_CALLBACK_URL",
+    )
+
     @field_validator("database_url", mode="before")
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
