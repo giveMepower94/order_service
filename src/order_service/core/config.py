@@ -19,6 +19,26 @@ class settings(BaseSettings):
         default="http://localhost:8000/api/orders/payment-callback",
         alias="ORDER_SERVICE_CALLBACK_URL",
     )
+    
+    kafka_bootstrap_servers: str = Field(
+        default="localhost:9092",
+        alias="KAFKA_BOOTSTRAP_SERVERS",
+    )
+
+    order_events_topic: str = Field(
+        default="student_system-order.events",
+        alias="ORDER_EVENTS_TOPIC",
+    )
+
+    outbox_poll_interval_seconds: int = Field(
+        default=1,
+        alias="OUTBOX_POLL_INTERVAL_SECONDS",
+    )
+
+    outbox_batch_size: int = Field(
+        default=100,
+        alias="OUTBOX_BATCH_SIZE",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from order_service.infrastructure.repositories.outbox import OutboxRepository
 from src.order_service.api.dependencies import (
     get_catalog_client,
     get_payments_client
@@ -19,7 +20,7 @@ from src.order_service.infrastructure.clients.payments import PaymentsClient
 from src.order_service.infrastructure.db.session import get_session
 from src.order_service.infrastructure.repositories.orders import OrdersRepository
 from src.order_service.schemas.orders import (
-    CreateOrderRequest, 
+    CreateOrderRequest,
     OrderResponse, 
     PaymentCallbackRequest)
 
@@ -97,16 +98,22 @@ async def payment_callback(
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     orders = OrdersRepository(session)
+    outbox = OutboxRepository(session)
     order = await orders.get_by_id(data.order_id)
 
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
 
     if data.status == "succeeded":
-        await orders.update_status(order, OrderStatus.PAID)
+        if order.status != OrderStatus.PAID.value:
+            await orders.update_status(order, OrderStatus.PAID)
+            await outbox.create_order_paid(order)
+
     elif data.status == "failed":
-        await orders.update_status(order, OrderStatus.CANCELLED)
-    
+        if order.status != OrderStatus.CANCELLED.value:
+            await orders.update_status(order, OrderStatus.CANCELLED)
+
     await session.commit()
 
     return {"status": "ok"}
+
