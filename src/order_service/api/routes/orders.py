@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from order_service.infrastructure.repositories.outbox import OutboxRepository
+from src.order_service.infrastructure.repositories.outbox import OutboxRepository
 from src.order_service.api.dependencies import (
     get_catalog_client,
     get_payments_client
