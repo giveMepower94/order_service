@@ -20,7 +20,7 @@ class HealthResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    stop_event = asyncio.Event
+    stop_event = asyncio.Event()
     outbox_worker_task = asyncio.create_task(run_outbox_worker(stop_event))
 
     try:
