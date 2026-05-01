@@ -7,6 +7,9 @@ from src.order_service.domain.enums import OrderStatus
 from src.order_service.infrastructure.db.session import AsyncSessionLocal
 from src.order_service.infrastructure.repositories.inbox import InboxRepository
 from src.order_service.infrastructure.repositories.orders import OrdersRepository
+from src.order_service.application.usecases.send_order_notification import (
+    send_order_notifications
+)
 
 
 SHIPMENT_EVENTS_TOPIC = "student_system-shipment.events"
@@ -47,9 +50,18 @@ async def handle_shipment_events(payload: dict):
 
         if event_type == "order.shipped":
             await orders.update_status(order, OrderStatus.SHIPPED)
+            await send_order_notifications(
+                order_id=order.id,
+                status=OrderStatus.SHIPPED.value,
+            )
 
         elif event_type == "order.cancelled":
             await orders.update_status(order, OrderStatus.CANCELLED)
+            await send_order_notifications(
+                order_id=order.id,
+                status=OrderStatus.CANCELLED.value,
+                reason=payload.get("reason"),
+            )
 
         await inbox.save_processed(
                 event_id=event_id,

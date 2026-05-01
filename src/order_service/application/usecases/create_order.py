@@ -11,6 +11,9 @@ from src.order_service.infrastructure.clients.payments import (
 from src.order_service.infrastructure.clients.catalog import CatalogClient
 from src.order_service.infrastructure.db.models import OrderModel
 from src.order_service.infrastructure.repositories.orders import OrdersRepository
+from src.order_service.application.usecases.send_order_notification import (
+    send_order_notifications
+)
 
 
 class CreateOrderUseCase:
@@ -53,7 +56,12 @@ class CreateOrderUseCase:
 
         await self.session.commit()
         await self.session.refresh(order)
-
+        
+        await send_order_notifications(
+            order_id=order.id,
+            status=OrderStatus.NEW.value,
+        )
+        
         amount: Decimal = item.price * quantity
 
         try:

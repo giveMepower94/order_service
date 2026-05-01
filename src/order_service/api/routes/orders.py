@@ -9,6 +9,9 @@ from src.order_service.api.dependencies import (
 from src.order_service.domain.enums import OrderStatus
 from src.order_service.infrastructure.clients.payments import PaymentsClient
 from src.order_service.application.usecases.create_order import CreateOrderUseCase
+from src.order_service.application.usecases.send_order_notification import (
+    send_order_notifications,
+)
 from src.order_service.application.usecases.get_order import GetOrderUseCase
 from src.order_service.core.exceptions import (
     CatalogServiceError,
@@ -108,12 +111,20 @@ async def payment_callback(
         if order.status != OrderStatus.PAID.value:
             await orders.update_status(order, OrderStatus.PAID)
             await outbox.create_order_paid(order)
+            await send_order_notifications(
+                order_id=order.id,
+                status=OrderStatus.PAID.value
+            )
 
     elif data.status == "failed":
         if order.status != OrderStatus.CANCELLED.value:
             await orders.update_status(order, OrderStatus.CANCELLED)
+            await send_order_notifications(
+                order_id=order.id,
+                status=OrderStatus.CANCELLED.value,
+                reason=data.error_message,
+            )
 
     await session.commit()
 
     return {"status": "ok"}
-
