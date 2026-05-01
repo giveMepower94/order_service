@@ -114,7 +114,7 @@ async def payment_callback(
         await outbox.create_order_paid(order)
         await session.commit()
         
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
         
         await send_order_notifications(
             order_id=order.id,

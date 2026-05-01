@@ -1,3 +1,5 @@
+import asyncio
+
 from src.order_service.infrastructure.clients.notifications import (
     NotificationsClient,
     NotificationsServiceError,
@@ -23,19 +25,24 @@ async def send_order_notifications(
     
     client = NotificationsClient()
     
-    try:
-        await client.send_notification(
-            message=message,
-            reference_id=order_id,
-            idempotency_key=f"notification-{status.lower()}-{order_id}"
-        )
+    for attempt in range(3):
+        try:
+            await client.send_notification(
+                message=message,
+                reference_id=order_id,
+                idempotency_key=f"notification-{status.lower()}-{order_id}"
+            )
+            
+            print(
+                f"NOTIFICATION: sent for order={order_id} status={status}",
+                flush=True,
+            )
+            return
         
-        print(
-            f"NOTIFICATION: sent for order={order_id} status={status}",
-            flush=True,
-        )
-    except NotificationsServiceError as exc:
-        print(
-            f"NOTIFICATION: failed for order={order_id} status={status}: {exc}",
-            flush=True,
-        )
+        except NotificationsServiceError as exc:
+            print(
+                f"NOTIFICATION: failed attempt={attempt + 1} "
+                f"for order={order_id} status={status}: {exc}",
+                flush=True,
+            )
+            await asyncio.sleep(2)
