@@ -29,20 +29,19 @@ async def lifespan(_: FastAPI):
         yield
     finally:
         stop_event.set()
-
         shipment_consumer_task.cancel()
 
-    try:
-        await outbox_worker_task
-    except Exception:
-        logger.exception("Outbox worker stopped with error")
+        try:
+            await outbox_worker_task
+        except Exception:
+            logger.exception("Outbox worker stopped with error")
 
-    try:
-        await shipment_consumer_task
-    except asyncio.CancelledError:
-        pass
-    except Exception:
-        logger.exception("Shipment consumer stopped with error")
+        try:
+            await shipment_consumer_task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.exception("Shipment consumer stopped with error")
 
 
 app = FastAPI(title="Order_service", lifespan=lifespan)
