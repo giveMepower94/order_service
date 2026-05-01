@@ -29,6 +29,11 @@ async def send_order_notifications(
             reference_id=order_id,
             idempotency_key=f"notification-{status.lower()}-{order_id}"
         )
+        
+        print(
+            f"NOTIFICATION: sent for order={order_id} status={status}",
+            flush=True,
+        )
     except NotificationsServiceError as exc:
         print(
             f"NOTIFICATION: failed for order={order_id} status={status}: {exc}",

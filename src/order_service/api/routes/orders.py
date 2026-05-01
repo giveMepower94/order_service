@@ -108,22 +108,20 @@ async def payment_callback(
         raise HTTPException(status_code=404, detail="Order not found")
 
     if data.status == "succeeded":
-        if order.status != OrderStatus.PAID.value:
-            await orders.update_status(order, OrderStatus.PAID)
-            await outbox.create_order_paid(order)
-            await send_order_notifications(
-                order_id=order.id,
-                status=OrderStatus.PAID.value
-            )
+        await orders.update_status(order, OrderStatus.PAID)
+        await outbox.create_order_paid(order)
+        await send_order_notifications(
+            order_id=order.id,
+            status=OrderStatus.PAID.value
+        )
 
     elif data.status == "failed":
-        if order.status != OrderStatus.CANCELLED.value:
-            await orders.update_status(order, OrderStatus.CANCELLED)
-            await send_order_notifications(
-                order_id=order.id,
-                status=OrderStatus.CANCELLED.value,
-                reason=data.error_message,
-            )
+        await orders.update_status(order, OrderStatus.CANCELLED)
+        await send_order_notifications(
+            order_id=order.id,
+            status=OrderStatus.CANCELLED.value,
+            reason=data.error_message,
+        )
 
     await session.commit()
 
