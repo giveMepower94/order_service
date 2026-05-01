@@ -86,3 +86,20 @@ class OutboxMessageModel(Base):
         nullable=True
     )
     last_error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class InboxMessageModel(Base):
+    __tablename__ = "inbox"
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    event_type: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc)
+    )
