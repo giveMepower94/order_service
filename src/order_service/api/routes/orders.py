@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,19 +112,25 @@ async def payment_callback(
     if data.status == "succeeded":
         await orders.update_status(order, OrderStatus.PAID)
         await outbox.create_order_paid(order)
+        await session.commit()
+        
+        asyncio.sleep(1)
+        
         await send_order_notifications(
             order_id=order.id,
             status=OrderStatus.PAID.value
         )
+        return {"status": "ok"}
 
     elif data.status == "failed":
         await orders.update_status(order, OrderStatus.CANCELLED)
+        await session.commit()
+        
         await send_order_notifications(
             order_id=order.id,
             status=OrderStatus.CANCELLED.value,
             reason=data.error_message,
         )
-
-    await session.commit()
+        return {"status": "ok"}
 
     return {"status": "ok"}
